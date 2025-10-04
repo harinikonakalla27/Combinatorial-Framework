@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combinatorial Optimization Solver</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #f8f9fa;
+            --shadow-color: rgba(0,0,0,0.1);
+            --border-radius: 12px;
+            --header-height: 70px;
+            --sidebar-width: 320px;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+                Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', Arial, sans-serif;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .header {
+            padding: 1.25rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            background-color: #ffffff;
+            box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 70px;
+        }
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+            color: var(--primary-color);
+            transition: color 0.2s ease;
+        }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .header-right { display: flex; align-items: center; gap: 1rem; }
+        .avatar {
+            width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+            border: 2px solid #e6e6e6; box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+            cursor: pointer; transition: transform 0.15s ease, box-shadow 0.2s ease;
+        }
+        .avatar:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+        .main-container {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            gap: 1.25rem;
+            padding: 1.5rem 2rem;
+            margin-top: calc(var(--header-height) + 1rem);
+            max-width: 1400px;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            min-height: calc(100vh - var(--header-height));
+        }
+        .sidebar {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px var(--shadow-color);
+            position: sticky;
+            top: calc(var(--header-height) + 1rem);
+            align-self: start;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 1.25rem 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px var(--shadow-color);
+            min-height: calc(100vh - var(--header-height) - 2rem);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .form-section {
+            margin-bottom: 1rem;
+            background: white;
+            padding: 1rem 1rem 1.25rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .form-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 1rem;
+        }
+        .form-section p {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        .form-control, .form-select {
+            font-size: 1.1rem;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%231a1a2e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 16px 16px;
+            appearance: none;
+            cursor: pointer;
+        }
+        /* Custom dropdown styles */
+        .custom-select { position: relative; }
+        .custom-select.is-open .custom-options { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .custom-select.is-open .custom-trigger { box-shadow: 0 10px 24px rgba(26,26,46,0.16), 0 0 0 2px rgba(26,26,46,0.12); }
+        .custom-trigger {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 0.75rem; padding: 0.8rem 1rem; border-radius: 8px;
+            border: 2px solid #e0e0e0; background: #fff; cursor: pointer;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .custom-trigger:hover { border-color: #cfcfcf; }
+        .custom-label { color: #1a1a2e; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .custom-caret { width: 16px; height: 16px; flex: 0 0 16px; }
+        .custom-caret svg { display: block; width: 100%; height: 100%; }
+        .custom-options {
+            position: absolute; left: 0; right: 0; top: calc(100% + 8px);
+            background: #fff; border-radius: 10px; box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+            padding: 8px; opacity: 0; transform: translateY(-6px); pointer-events: none;
+            transition: opacity 120ms ease, transform 120ms ease; z-index: 30; max-height: 280px; overflow: auto;
+        }
+        .custom-option { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+        .custom-option:hover { background: #f2f2f5; }
+        .custom-option[aria-selected="true"] { background: #1a49ff; color: #fff; }
+        .custom-hidden { position: absolute !important; left: -9999px !important; top: auto !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
+
+        /* Custom file upload */
+        .file-upload { display: flex; align-items: center; gap: 0.75rem; }
+        .file-upload input[type="file"] { position: absolute; left: -9999px; }
+        .file-trigger {
+            background-color: var(--secondary-color);
+            border: none; border-radius: 8px; padding: 0.7rem 1rem;
+            font-size: 1rem; cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .file-trigger:hover { background-color: #dcdcdc; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        .file-name { flex: 1; min-height: 44px; display: flex; align-items: center; padding: 0 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; color: #555; background: #fff; }
+        .file-name.has-file { color: #1a1a2e; }
+        body.dark-mode .file-name { border-color: #3a3a5e; background: #1a1a2e; color: #bbb; }
+        body.dark-mode .file-name.has-file { color: #fff; }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 6px 18px rgba(26,26,46,0.08), 0 0 0 2px rgba(26,26,46,0.12);
+            outline: none;
+        }
+        .form-select:hover {
+            border-color: #cfcfcf;
+        }
+        .btn-sample {
+            background-color: var(--secondary-color);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            margin-right: 0.75rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            cursor: pointer;
+        }
+        .btn-sample:hover {
+            background-color: #dcdcdc;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+        .btn-sample:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .btn-run {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem;
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 1.25rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            box-shadow: 0 8px 20px rgba(26,26,46,0.15);
+            cursor: pointer;
+            position: sticky;
+            bottom: 1rem;
+            z-index: 10;
+        }
+        .btn-run:hover {
+            background-color: #2a2a4e;
+            transform: translateY(-1px);
+            box-shadow: 0 12px 28px rgba(26,26,46,0.22);
+        }
+        .btn-run:active { transform: translateY(0); box-shadow: 0 6px 16px rgba(26,26,46,0.18); }
+        .btn-run:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+        .algorithm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .algorithm-btn {
+            background-color: var(--secondary-color);
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+            outline: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            will-change: transform, box-shadow;
+        }
+        .algorithm-btn:hover {
+            background-color: #dcdcdc;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        }
+        .algorithm-btn:focus-visible {
+            box-shadow: 0 0 0 3px rgba(26,26,46,0.2);
+        }
+        .algorithm-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(26,26,46,0.22);
+        }
+        .algorithm-btn:active { transform: translateY(0); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .visualization-container {
+            flex: 1;
+            min-height: 320px;
+            height: clamp(320px, 55vh, 520px);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background: white;
+            padding: 1rem;
+            box-shadow: inset 0 0 10px var(--shadow-color);
+        }
+        .performance-chart {
+            width: 100%;
+            height: clamp(300px, 50vh, 520px);
+            margin-bottom: 2rem;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            background: white;
+            padding: 2rem;
+        }
+        .results-section h3 {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            color: var(--primary-color);
+        }
+        .results-table {
+            width: 100%;
+            margin-top: 2rem;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: 0 4px 6px var(--shadow-color);
+        }
+        .results-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1.2rem 1rem;
+            font-size: 1.1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .results-table td {
+            padding: 1.2rem 1rem;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .results-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .status-success {
+            color: #28a745;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .status-success::before {
+            content: "✓";
+            font-size: 1.2rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1600px) {
+            :root {
+                --sidebar-width: 350px;
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .sidebar {
+                position: static;
+                height: auto;
+            }
+            .performance-chart { height: 360px; }
+            .visualization-container { height: 360px; }
+        }
+
+
+    </style>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iIzFhMWEyZSIvPjwvc3ZnPg==" alt="Logo">
+            <h1>Combinatorial Optimization Solver</h1>
+        </div>
+        <div class="header-right">
+            <img id="profileAvatar" class="avatar" alt="Profile" src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZTZlNmU2IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDM2IDM2Ij48Y2lyY2xlIGN4PSIxOCIgY3k9IjE4IiByPSIxOCIvPjxjaXJjbGUgY3g9IjE4IiBjeT0iMTQiIHI9IjciIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzAgMzAuNWMtMi42LTQuNS03LjEtNy41LTEyLTcuNXMtOS40IDMtMTIgNy41QzkuNSAzMyA2LjUgMzQgNi41IDM0aDIzYzAgMCAzLjEtMSA0LjUtMy41WiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==">
+            <input id="avatarInput" type="file" accept="image/*" style="position:absolute;left:-9999px;">
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="form-section">
+                <h2>1. Select Problem Type</h2>
+                <select class="form-select" id="problemType">
+                    <option value="tsp">Traveling Salesperson (TSP)</option>
+                    <option value="knapsack">0/1 Knapsack Problem</option>
+                </select>
+                <div id="problemTypeCustom"></div>
+            </div>
+
+            <div class="form-section">
+                <h2>2. Choose Dataset</h2>
+                <p class="text-muted mb-3">Select a sample dataset, upload your own JSON file, or enter data manually.</p>
+                <div class="mb-2">
+                    <button class="btn-sample" id="smallSample">Small Sample</button>
+                    <button class="btn-sample" id="mediumSample">Medium Sample</button>
+                </div>
+                <div class="mb-2">
+                    <div class="file-upload">
+                        <button type="button" class="file-trigger" id="fileTrigger">Choose File</button>
+                        <div class="file-name" id="fileName">No file chosen</div>
+                        <input type="file" id="fileInput" accept=".json">
+                    </div>
+                </div>
+                <div class="mb-2" id="manualInputTSP" style="display: none;">
+                    <label for="coordinatesInput" class="form-label">Coordinates (JSON array of [x,y] pairs):</label>
+                    <textarea class="form-control" id="coordinatesInput" rows="4" placeholder='[[0,0],[10,10],[20,0]]'></textarea>
+                </div>
+                <div class="mb-2" id="manualInputKnapsack" style="display: none;">
+                    <label for="weightsInput" class="form-label">Weights (comma-separated numbers):</label>
+                    <input type="text" class="form-control" id="weightsInput" placeholder="2,3,4,5">
+                    <label for="valuesInput" class="form-label">Values (comma-separated numbers):</label>
+                    <input type="text" class="form-control" id="valuesInput" placeholder="3,4,5,8">
+                    <label for="capacityInput" class="form-label">Capacity:</label>
+                    <input type="number" class="form-control" id="capacityInput" placeholder="8">
+                </div>
+                <div class="mb-2">
+                    <button class="btn-sample" id="loadManual">Load Manual Data</button>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>3. Select Algorithms</h2>
+                <div class="algorithm-grid">
+                    <button class="algorithm-btn" data-algorithm="greedy">Greedy</button>
+                    <button class="algorithm-btn" data-algorithm="dynamic">Dynamic Programming</button>
+                    <button class="algorithm-btn" data-algorithm="backtrack">Backtracking</button>
+                </div>
+            </div>
+
+            <button class="btn-run" id="runSolver">Run Solver</button>
+        </div>
+
+        <div class="content">
+            <div id="readyMessage" class="alert alert-info">
+                Ready to Optimize! Select a problem, choose a dataset, pick your algorithms, and click "Run Solver" to see the results here.
+            </div>
+
+            <div id="results" style="display: none;">
+                <div id="visualization" class="visualization-container"></div>
+                
+                <h3>Performance Comparison</h3>
+                <div id="performanceChart" class="performance-chart"></div>
+
+                <h3>Detailed Results</h3>
+                <table class="table results-table">
+                    <thead>
+                        <tr>
+                            <th>Algorithm</th>
+                            <th>Runtime (s)</th>
+                            <th>Distance</th>
+                            <th>Tour</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple helpers for UI feedback
+        function setLoading(isLoading) {
+            const btn = document.getElementById('runSolver');
+            btn.disabled = isLoading;
+            btn.textContent = isLoading ? 'Running…' : 'Run Solver';
+            btn.style.opacity = isLoading ? '0.8' : '1';
+        }
+
+        function showToast(message, type = 'error') {
+            const id = `toast-${Date.now()}`;
+            const bg = type === 'success' ? 'bg-success' : 'bg-danger';
+            const containerId = 'toastContainer';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.position = 'fixed';
+                container.style.top = '1rem';
+                container.style.right = '1rem';
+                container.style.zIndex = '2000';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white ${bg}`;
+            toast.role = 'alert';
+            toast.ariaLive = 'assertive';
+            toast.ariaAtomic = 'true';
+            toast.id = id;
+            toast.style.minWidth = '280px';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+            container.appendChild(toast);
+            // Bootstrap 5 toast init if available
+            try {
+                const bsToast = new bootstrap.Toast(toast, { delay: 3500 });
+                bsToast.show();
+            } catch (_) {
+                toast.style.display = 'block';
+                setTimeout(() => toast.remove(), 3500);
+            }
+        }
+        // CSRF token helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Initialize algorithms selection
+        document.querySelectorAll('.algorithm-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.classList.toggle('active');
+            });
+        });
+
+        // Custom dropdown for problem type
+        (function initCustomSelect() {
+            const nativeSelect = document.getElementById('problemType');
+            const mount = document.getElementById('problemTypeCustom');
+            if (!nativeSelect || !mount) return;
+
+            nativeSelect.classList.add('custom-hidden');
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-select';
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'custom-trigger';
+            trigger.setAttribute('aria-haspopup', 'listbox');
+            trigger.setAttribute('aria-expanded', 'false');
+
+            const label = document.createElement('span');
+            label.className = 'custom-label';
+            label.textContent = nativeSelect.options[nativeSelect.selectedIndex].textContent;
+
+            const caret = document.createElement('span');
+            caret.className = 'custom-caret';
+            caret.innerHTML = "<svg viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'><path d='M4 6l4 4 4-4' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+
+            trigger.appendChild(label);
+            trigger.appendChild(caret);
+
+            const list = document.createElement('div');
+            list.className = 'custom-options';
+            list.setAttribute('role', 'listbox');
+
+            Array.from(nativeSelect.options).forEach((opt, idx) => {
+                const item = document.createElement('div');
+                item.className = 'custom-option';
+                item.setAttribute('role', 'option');
+                item.setAttribute('data-value', opt.value);
+                item.setAttribute('aria-selected', String(idx === nativeSelect.selectedIndex));
+                item.textContent = opt.textContent;
+                item.addEventListener('click', () => {
+                    nativeSelect.value = opt.value;
+                    label.textContent = opt.textContent;
+                    Array.from(list.children).forEach(el => el.setAttribute('aria-selected', 'false'));
+                    item.setAttribute('aria-selected', 'true');
+                    wrapper.classList.remove('is-open');
+                    trigger.setAttribute('aria-expanded', 'false');
+                    nativeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+                list.appendChild(item);
+            });
+
+            function toggleOpen() {
+                const isOpen = wrapper.classList.toggle('is-open');
+                trigger.setAttribute('aria-expanded', String(isOpen));
+            }
+
+            trigger.addEventListener('click', toggleOpen);
+            document.addEventListener('click', (e) => {
+                if (!wrapper.contains(e.target)) {
+                    wrapper.classList.remove('is-open');
+                    trigger.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            // Keyboard support
+            trigger.addEventListener('keydown', (e) => {
+                const options = Array.from(list.children);
+                let idx = options.findIndex(o => o.getAttribute('aria-selected') === 'true');
+                if (e.key === 'ArrowDown') { e.preventDefault(); idx = Math.min(idx + 1, options.length - 1); options[idx].click(); toggleOpen(); }
+                if (e.key === 'ArrowUp') { e.preventDefault(); idx = Math.max(idx - 1, 0); options[idx].click(); toggleOpen(); }
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(); }
+                if (e.key === 'Escape') { wrapper.classList.remove('is-open'); trigger.setAttribute('aria-expanded', 'false'); }
+            });
+
+            wrapper.appendChild(trigger);
+            wrapper.appendChild(list);
+            mount.appendChild(wrapper);
+        })();
+
+        // Sample datasets
+        const smallSampleTSP = {
+            coordinates: [
+                [0, 0],
+                [10, 10],
+                [20, 0],
+                [10, -10]
+            ]
+        };
+
+        const mediumSampleTSP = {
+            coordinates: [
+                [0, 0],
+                [20, 20],
+                [40, 0],
+                [20, -20],
+                [-20, 0]
+            ]
+        };
+
+        // Knapsack sample datasets
+        const smallSampleKnapsack = {
+            weights: [2, 3, 4, 5],
+            values:  [3, 4, 5, 8],
+            capacity: 8
+        };
+        const mediumSampleKnapsack = {
+            weights: [2, 5, 4, 7, 1, 3, 8],
+            values:  [10, 13, 9, 17, 6, 7, 19],
+            capacity: 15
+        };
+
+        // Handle sample dataset buttons (switches by problem type)
+        document.getElementById('smallSample').addEventListener('click', () => {
+            const pt = document.getElementById('problemType').value;
+            if (pt === 'tsp') return loadSampleData(smallSampleTSP);
+            return loadSampleData(smallSampleKnapsack);
+        });
+        document.getElementById('mediumSample').addEventListener('click', () => {
+            const pt = document.getElementById('problemType').value;
+            if (pt === 'tsp') return loadSampleData(mediumSampleTSP);
+            return loadSampleData(mediumSampleKnapsack);
+        });
+
+        function loadSampleData(data) {
+            currentData = data;
+            document.getElementById('readyMessage').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        // Reset dataset when switching problem type to a sensible default
+        document.getElementById('problemType').addEventListener('change', (e) => {
+            if (e.target.value === 'tsp') {
+                currentData = smallSampleTSP;
+                document.getElementById('manualInputTSP').style.display = 'block';
+                document.getElementById('manualInputKnapsack').style.display = 'none';
+            } else {
+                currentData = smallSampleKnapsack;
+                document.getElementById('manualInputTSP').style.display = 'none';
+                document.getElementById('manualInputKnapsack').style.display = 'block';
+            }
+            document.getElementById('readyMessage').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        });
+
+        // Handle manual data loading
+        document.getElementById('loadManual').addEventListener('click', () => {
+            const problemType = document.getElementById('problemType').value;
+            try {
+                if (problemType === 'tsp') {
+                    const coordinatesText = document.getElementById('coordinatesInput').value.trim();
+                    if (!coordinatesText) {
+                        showToast('Please enter coordinates.', 'error');
+                        return;
+                    }
+                    const coordinates = JSON.parse(coordinatesText);
+                    if (!Array.isArray(coordinates) || !coordinates.every(coord => Array.isArray(coord) && coord.length === 2 && typeof coord[0] === 'number' && typeof coord[1] === 'number')) {
+                        showToast('Invalid coordinates format. Must be an array of [x,y] pairs.', 'error');
+                        return;
+                    }
+                    currentData = { coordinates };
+                } else {
+                    const weightsText = document.getElementById('weightsInput').value.trim();
+                    const valuesText = document.getElementById('valuesInput').value.trim();
+                    const capacityText = document.getElementById('capacityInput').value.trim();
+                    if (!weightsText || !valuesText || !capacityText) {
+                        showToast('Please fill in all fields.', 'error');
+                        return;
+                    }
+                    const weights = weightsText.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+                    const values = valuesText.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+                    const capacity = parseFloat(capacityText);
+                    if (weights.length !== values.length || weights.length === 0 || isNaN(capacity)) {
+                        showToast('Invalid input. Weights and values must be comma-separated numbers of equal length, capacity a number.', 'error');
+                        return;
+                    }
+                    currentData = { weights, values, capacity };
+                }
+                document.getElementById('readyMessage').style.display = 'block';
+                document.getElementById('results').style.display = 'none';
+                showToast('Manual data loaded', 'success');
+            } catch (error) {
+                showToast('Invalid input format.', 'error');
+            }
+        });
+
+        // Initialize manual inputs visibility
+        document.getElementById('manualInputTSP').style.display = 'block';
+        document.getElementById('manualInputKnapsack').style.display = 'none';
+
+        // Handle solver execution
+        document.getElementById('runSolver').addEventListener('click', async () => {
+            const selectedAlgorithms = Array.from(document.querySelectorAll('.algorithm-btn.active'))
+                .map(btn => btn.dataset.algorithm);
+            
+            if (selectedAlgorithms.length === 0) {
+                showToast('Please select at least one algorithm', 'error');
+                return;
+            }
+
+            const problemType = document.getElementById('problemType').value;
+            
+            try {
+                document.getElementById('readyMessage').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+                setLoading(true);
+
+                // Call backend API for each selected algorithm
+                const results = await Promise.all(selectedAlgorithms.map(async algorithm => {
+                    const response = await fetch(`/${problemType}/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            ...currentData,
+                            strategy: algorithm
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to solve the problem');
+                    }
+                    return data;
+                }));
+
+                updateVisualization(results);
+                updatePerformanceChart(results);
+                updateResultsTable(results);
+                showToast('Solved successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showToast(error.message || 'An error occurred while solving the problem', 'error');
+            }
+            finally {
+                setLoading(false);
+            }
+        });
+
+        function updateVisualization(results) {
+            const container = document.getElementById('visualization');
+            
+            const problemType = document.getElementById('problemType').value;
+            if (problemType === 'tsp') {
+                // Create TSP route visualization for each algorithm result
+                const colorPalette = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00'];
+                const dashPalette = ['solid', 'dash', 'dot', 'dashdot', 'longdash'];
+                // Determine coordinates (from dataset or generated)
+                const anyPath = (results[0] && results[0].path) ? results[0].path : [];
+                const coordinates = (currentData && currentData.coordinates)
+                    ? currentData.coordinates.map(([x, y]) => ({ x, y }))
+                    : generateTSPCoordinates(anyPath.length);
+
+                // Base city markers with labels
+                const cityTrace = {
+                    x: coordinates.map(p => p.x),
+                    y: coordinates.map(p => p.y),
+                    mode: 'markers+text',
+                    type: 'scatter',
+                    name: 'Cities',
+                    text: coordinates.map((_, i) => String(i)),
+                    textposition: 'top center',
+                    marker: { size: 10, color: '#222', line: { color: '#fff', width: 1 } },
+                    hoverinfo: 'skip'
+                };
+
+                const routeTraces = results.map((res, idx) => ({
+                    x: (res.path || []).map(i => coordinates[i].x),
+                    y: (res.path || []).map(i => coordinates[i].y),
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    name: `${res.strategy} (dist=${(res.distance ?? 0).toFixed(2)})`,
+                    marker: {
+                        size: 7,
+                        color: colorPalette[idx % colorPalette.length]
+                    },
+                    line: {
+                        color: colorPalette[idx % colorPalette.length],
+                        width: 3,
+                        dash: dashPalette[idx % dashPalette.length],
+                        shape: 'linear'
+                    },
+                    opacity: 0.9,
+                    hovertemplate: `${res.strategy}<br>` +
+                        res.path.map((i, k) => `#${k}: ${i}`).join(' → ') +
+                        '<extra></extra>'
+                }));
+
+                Plotly.newPlot(container, [cityTrace, ...routeTraces], {
+                    title: 'TSP Routes per Algorithm',
+                    showlegend: true,
+                    xaxis: { title: 'X', zeroline: false, showgrid: false, scaleanchor: 'y', scaleratio: 1 },
+                    yaxis: { title: 'Y', zeroline: false, showgrid: false },
+                    margin: { t: 40, r: 20, b: 40, l: 50 }
+                });
+            } else if (problemType === 'knapsack') {
+                // Simple knapsack visualization: selected vs unselected items by weight/value ratio
+                const bestResult = results.reduce((a, b) => 
+                    (a.total_value > b.total_value) ? a : b
+                );
+                if (!currentData || !currentData.weights || !currentData.values) {
+                    container.innerHTML = '<div class="text-muted">Upload or select a dataset to visualize knapsack selection.</div>';
+                    return;
+                }
+                const items = currentData.weights.map((w, i) => ({
+                    idx: i,
+                    weight: w,
+                    value: currentData.values[i],
+                    selected: bestResult.selected_items.includes(i)
+                }));
+                const x = items.map(it => `#${it.idx}`);
+                const valueTrace = {
+                    x,
+                    y: items.map(it => it.value),
+                    type: 'bar',
+                    name: 'Value',
+                    marker: { color: items.map(it => it.selected ? '#1a1a2e' : '#d0d0d0') }
+                };
+                const weightTrace = {
+                    x,
+                    y: items.map(it => it.weight),
+                    type: 'bar',
+                    name: 'Weight',
+                    marker: { color: items.map(it => it.selected ? '#4a4a6e' : '#e6e6e6') }
+                };
+                Plotly.newPlot(container, [valueTrace, weightTrace], {
+                    barmode: 'group',
+                    title: 'Knapsack Items (selected highlighted)'
+                });
+            }
+        }
+
+        function generateTSPCoordinates(n) {
+            const coordinates = [];
+            const radius = 200;
+            const centerX = 250;
+            const centerY = 250;
+
+            for (let i = 0; i < n; i++) {
+                const angle = (i * 2 * Math.PI) / n;
+                coordinates.push({
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle)
+                });
+            }
+            return coordinates;
+        }
+
+        function updatePerformanceChart(results) {
+            const container = document.getElementById('performanceChart');
+            const problemType = document.getElementById('problemType').value;
+            let traces = [];
+            if (problemType === 'tsp') {
+                traces = [
+                    {
+                x: results.map(r => r.strategy),
+                y: results.map(r => r.distance),
+                name: 'Distance',
+                type: 'bar'
+                    },
+                    {
+                        x: results.map(r => r.strategy),
+                        y: results.map(r => r.runtime),
+                        name: 'Runtime (s)',
+                        type: 'bar'
+                    }
+                ];
+            } else {
+                traces = [
+                    {
+                        x: results.map(r => r.strategy),
+                        y: results.map(r => r.total_value),
+                        name: 'Total Value',
+                        type: 'bar'
+                    },
+                    {
+                x: results.map(r => r.strategy),
+                y: results.map(r => r.runtime),
+                name: 'Runtime (s)',
+                type: 'bar'
+                    }
+                ];
+            }
+            Plotly.newPlot(container, traces, {
+                barmode: 'group',
+                title: 'Performance Comparison',
+                yaxis: {title: 'Value'},
+                showlegend: true
+            });
+        }
+
+        function updateResultsTable(results) {
+            const tbody = document.getElementById('resultsTableBody');
+            const problemType = document.getElementById('problemType').value;
+            if (problemType === 'tsp') {
+            tbody.innerHTML = results.map(result => `
+                <tr>
+                    <td>${result.strategy}</td>
+                    <td>${result.runtime.toFixed(2)}</td>
+                    <td>${result.distance.toFixed(2)}</td>
+                    <td>${result.path.join(' → ')}</td>
+                    <td><span class="status-success">Success</span></td>
+                </tr>
+            `).join('');
+            } else {
+                tbody.innerHTML = results.map(result => `
+                    <tr>
+                        <td>${result.strategy}</td>
+                        <td>${result.runtime.toFixed(2)}</td>
+                        <td>${result.total_value.toFixed(2)}</td>
+                        <td>${result.selected_items.join(', ')}</td>
+                        <td><span class="status-success">Success</span></td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Handle file upload
+        const fileInput = document.getElementById('fileInput');
+        const fileTrigger = document.getElementById('fileTrigger');
+        const fileNameEl = document.getElementById('fileName');
+
+        if (fileTrigger && fileInput) {
+            fileTrigger.addEventListener('click', () => fileInput.click());
+        }
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) { fileNameEl.classList.remove('has-file'); fileNameEl.textContent = 'No file chosen'; return; }
+
+            fileNameEl.textContent = file.name;
+            fileNameEl.classList.add('has-file');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    const problemType = document.getElementById('problemType').value;
+                    
+                    // Validate file format
+                    if (problemType === 'tsp' && !json.coordinates) {
+                        showToast('Invalid TSP file format. Requires "coordinates" array of [x,y] points.', 'error');
+                        event.target.value = '';
+                        return;
+                    }
+                    if (problemType === 'knapsack' && (!json.weights || !json.values || !json.capacity)) {
+                        showToast('Invalid Knapsack file. Requires "weights", "values" and "capacity".', 'error');
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    currentData = json;
+                    document.getElementById('readyMessage').style.display = 'block';
+                    document.getElementById('results').style.display = 'none';
+                    showToast('Dataset loaded', 'success');
+                } catch (e) {
+                    showToast('Invalid JSON file. Please check the file format.', 'error');
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Initialize with current data
+        let currentData = smallSampleTSP;
+
+        // Optional: allow changing the avatar image at runtime
+        const avatarEl = document.getElementById('profileAvatar');
+        const avatarInput = document.getElementById('avatarInput');
+        if (avatarEl && avatarInput) {
+            avatarEl.addEventListener('click', () => avatarInput.click());
+            avatarInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => { avatarEl.src = ev.target.result; };
+                reader.readAsDataURL(file);
+            });
+        }
+    </script>
+</body>
+</html>
